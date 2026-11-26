@@ -31,7 +31,8 @@ input[type=file] { display: none; }
 #prog > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
 #cam { display: none; margin-top: 12px; }
 #cam video { width: 100%; max-height: 60vh; background: #000; border-radius: 10px; object-fit: contain; }
-.samples { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.samples { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; margin-top: 6px; }
+.samples-h { font-size: .9rem; color: var(--sub); margin: 14px 0 0; font-weight: 600; }
 .samples img { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid transparent; }
 .samples img:hover { border-color: var(--accent); }
 .result { display: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
@@ -71,6 +72,7 @@ details summary { cursor: pointer; }
         <button id="camClose">閉じる</button>
       </div>
     </div>
+    <p class="samples-h">サンプルで試す（押すと判定します）</p>
     <div class="samples" id="samples"></div>
     <div id="prog"><div></div></div>
     <div id="status">AI モデル（約 97MB）を読み込んでいます…</div>
