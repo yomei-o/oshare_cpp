@@ -1,0 +1,27 @@
+{
+ "score": {
+  "pos": ["a photo of a person in a stylish, fashionable outfit",
+          "a photo of a well-dressed person with great fashion sense",
+          "a street snap of a trendy, chic outfit"],
+  "neg": ["a photo of a person in an unfashionable, sloppy outfit",
+          "a photo of a poorly dressed person with no fashion sense",
+          "a photo of a person in frumpy, plain everyday clothes"]
+ },
+ "tags": [
+  ["カジュアル", "a photo of a person wearing casual style clothes"],
+  ["ストリート", "a photo of a person wearing streetwear fashion"],
+  ["モード", "a photo of a person wearing avant-garde high fashion, mode style"],
+  ["きれいめ", "a photo of a person wearing smart, elegant clean-cut clothes"],
+  ["フェミニン", "a photo of a person wearing feminine style fashion"],
+  ["ナチュラル", "a photo of a person wearing natural, relaxed linen and earth tone clothes"],
+  ["ガーリー", "a photo of a person wearing cute girly fashion"],
+  ["スポーティ", "a photo of a person wearing sporty athletic clothes"],
+  ["トラッド", "a photo of a person wearing traditional preppy fashion"],
+  ["古着・ヴィンテージ", "a photo of a person wearing vintage retro clothes"],
+  ["ロック", "a photo of a person wearing rock style fashion with leather"],
+  ["ビジネス", "a photo of a person wearing a business suit"],
+  ["部屋着", "a photo of a person wearing loungewear, pajamas or sweatpants"],
+  ["モノトーン", "a photo of a person wearing a black and white monochrome outfit"],
+  ["カラフル", "a photo of a person wearing a colorful outfit"]
+ ]
+}

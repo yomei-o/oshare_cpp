@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>おしゃれ度チェッカー</title>
+<style>
+:root {
+  --bg: #faf8f5; --fg: #222; --sub: #6b6560; --card: #fff; --line: #e6e1da;
+  --accent: #d6336c; --accent2: #f08c00; --bar: #f1ece6;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #17161a; --fg: #eee; --sub: #a49e98; --card: #222126; --line: #35333a; --bar: #2e2c33; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif; line-height: 1.6; }
+main { max-width: 760px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 1.6rem; margin: 8px 0 4px; letter-spacing: .02em; }
+h1 span { color: var(--accent); }
+.lead { color: var(--sub); margin: 0 0 16px; font-size: .95rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+button, label.btn { appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  border-radius: 999px; padding: 10px 16px; font-size: 1rem; cursor: pointer; font-family: inherit; }
+button.primary, label.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+input[type=file] { display: none; }
+#status { font-size: .9rem; color: var(--sub); margin-top: 10px; min-height: 1.4em; }
+#prog { height: 6px; background: var(--bar); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+#prog > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+#cam { display: none; margin-top: 12px; }
+#cam video { width: 100%; max-height: 60vh; background: #000; border-radius: 10px; object-fit: contain; }
+.samples { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.samples img { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid transparent; }
+.samples img:hover { border-color: var(--accent); }
+.result { display: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+.result.show { display: grid; }
+@media (max-width: 560px) { .result.show { grid-template-columns: 1fr; } }
+#preview { width: 100%; border-radius: 10px; display: block; }
+.score { font-size: 4rem; font-weight: 800; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.score small { font-size: 1.2rem; color: var(--sub); font-weight: 600; margin-left: 4px; }
+.gauge { height: 12px; background: var(--bar); border-radius: 6px; overflow: hidden; margin: 10px 0 6px; }
+.gauge > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width .6s ease; }
+.comment { font-weight: 700; margin: 8px 0 14px; }
+.tags h3 { font-size: .9rem; color: var(--sub); margin: 0 0 6px; font-weight: 600; }
+.tag { display: grid; grid-template-columns: 7.5em 1fr 3em; gap: 8px; align-items: center; font-size: .92rem; margin: 4px 0; }
+.tag .b { height: 8px; background: var(--bar); border-radius: 4px; overflow: hidden; }
+.tag .b > div { height: 100%; background: var(--accent); opacity: .75; }
+.tag .v { text-align: right; color: var(--sub); font-variant-numeric: tabular-nums; }
+.note { font-size: .82rem; color: var(--sub); }
+.note a { color: inherit; }
+details summary { cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>おしゃれ度<span>チェッカー</span></h1>
+  <p class="lead">服装の写真から、AI が「おしゃれ度」と近いスタイルを答えます。写真はこの端末の中だけで処理し、どこにも送りません。</p>
+
+  <div class="card">
+    <div class="row">
+      <label class="btn primary" id="pickLabel">写真を選ぶ<input type="file" id="file" accept="image/*"></label>
+      <button id="camBtn">カメラ</button>
+    </div>
+    <div id="cam">
+      <video id="video" playsinline muted></video>
+      <div class="row" style="margin-top:8px">
+        <button class="primary" id="shot">撮る</button>
+        <button id="flip">前後を切り替え</button>
+        <button id="camClose">閉じる</button>
+      </div>
+    </div>
+    <div class="samples" id="samples"></div>
+    <div id="prog"><div></div></div>
+    <div id="status">AI モデル（約 97MB）を読み込んでいます…</div>
+  </div>
+
+  <div class="card result" id="result">
+    <div><img id="preview" alt="判定した写真"></div>
+    <div>
+      <div class="score"><span id="score">0</span><small>点</small></div>
+      <div class="gauge"><div id="gauge"></div></div>
+      <div class="comment" id="comment"></div>
+      <div class="tags"><h3>近いスタイル</h3><div id="tags"></div></div>
+    </div>
+  </div>
+
+  <div class="card note">
+    <p style="margin-top:0"><b>しくみ</b>：OpenAI の CLIP（ViT-B/32）を C++ で書き直して WebAssembly にしたものが、写真と「おしゃれな服装の写真」「だらしない服装の写真」という言葉のどちらに近いかを比べています。スタイルも同じように、写真に一番近い言葉を選んでいます。</p>
+    <p>全身が写っていて、人が大きく写っている写真のほうが当たりやすいです。点数は AI の感想で、正解ではありません。背景や写真の撮り方にも影響されます。</p>
+    <details><summary>サンプル写真のクレジット</summary><ul id="credits"></ul></details>
+    <p style="margin-bottom:0">ソース：<a href="https://github.com/yomei-o/oshare_cpp">github.com/yomei-o/oshare_cpp</a>（C++ / Python）</p>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const worker = new Worker("worker.js");
+let ready = false, busy = false, pending = null, facing = "environment", stream = null;
+
+function setStatus(t) { $("status").textContent = t; }
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === "progress") {
+    $("prog").firstElementChild.style.width = (100 * m.got / m.total).toFixed(1) + "%";
+    setStatus(`AI モデルを読み込んでいます… ${(m.got / 1048576).toFixed(0)} / ${(m.total / 1048576).toFixed(0)} MB`);
+  } else if (m.type === "ready") {
+    ready = true; $("prog").style.display = "none";
+    setStatus("準備できました。写真を選ぶか、カメラで撮ってください。");
+    if (pending) { const p = pending; pending = null; judge(p); }
+  } else if (m.type === "result") {
+    busy = false; show(m.r); setStatus(`判定しました（${(m.ms / 1000).toFixed(1)} 秒）`);
+  } else if (m.type === "error") {
+    busy = false; setStatus("エラー: " + m.message);
+  }
+};
+
+// 長辺 640px に縮めて RGBA で worker に渡す
+function toRGBA(src, sw, sh) {
+  const s = Math.min(1, 640 / Math.max(sw, sh));
+  const w = Math.max(1, Math.round(sw * s)), h = Math.max(1, Math.round(sh * s));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(src, 0, 0, w, h);
+  return { rgba: g.getImageData(0, 0, w, h).data, w, h, url: c.toDataURL("image/jpeg", 0.9) };
+}
+
+function judge(img) {
+  $("preview").src = img.url;
+  if (!ready) { pending = img; setStatus("モデルの読み込みが終わったら判定します…"); return; }
+  if (busy) return;
+  busy = true; setStatus("判定しています…");
+  worker.postMessage({ id: 1, rgba: img.rgba, w: img.w, h: img.h }, [img.rgba.buffer]);
+}
+
+function comment(s, top) {
+  let c;
+  if (s >= 90) c = "完璧。このまま街でスナップされそう。";
+  else if (s >= 75) c = "かなりおしゃれ。";
+  else if (s >= 60) c = "いい感じ。";
+  else if (s >= 40) c = "ふつう。小物かシルエットでひと工夫すると上がりそう。";
+  else if (s >= 20) c = "ラフめ。リラックス感はある。";
+  else c = "今日はお休みモード？";
+  return `${c} いちばん近いのは「${top}」系。`;
+}
+
+function show(r) {
+  $("result").classList.add("show");
+  const s = Math.round(r.score);
+  $("score").textContent = s;
+  $("gauge").style.width = "0";
+  requestAnimationFrame(() => requestAnimationFrame(() => { $("gauge").style.width = s + "%"; }));
+  $("comment").textContent = comment(s, r.tags[0][0]);
+  const box = $("tags"); box.textContent = "";
+  for (const [label, p] of r.tags.slice(0, 5)) {
+    const d = document.createElement("div"); d.className = "tag";
+    d.innerHTML = `<span></span><div class="b"><div style="width:${(100 * p).toFixed(1)}%"></div></div><span class="v">${Math.round(100 * p)}%</span>`;
+    d.firstChild.textContent = label; box.appendChild(d);
+  }
+  $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+$("file").onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const bmp = await createImageBitmap(f, { imageOrientation: "from-image" });
+    judge(toRGBA(bmp, bmp.width, bmp.height)); bmp.close();
+  } catch (err) { setStatus("この画像は読めませんでした: " + err); }
+  e.target.value = "";
+};
+
+async function openCam() {
+  closeCam();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false });
+  } catch (err) { setStatus("カメラを開けませんでした: " + err.message); return; }
+  const v = $("video"); v.srcObject = stream; v.style.transform = facing === "user" ? "scaleX(-1)" : "";
+  await v.play(); $("cam").style.display = "block";
+}
+function closeCam() {
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+  $("cam").style.display = "none";
+}
+$("camBtn").onclick = openCam;
+$("camClose").onclick = closeCam;
+$("flip").onclick = () => { facing = facing === "user" ? "environment" : "user"; openCam(); };
+$("shot").onclick = () => { const v = $("video"); if (v.videoWidth) judge(toRGBA(v, v.videoWidth, v.videoHeight)); };
+
+fetch("samples/credits.json").then((r) => r.json()).then((list) => {
+  for (const c of list) {
+    const im = new Image(); im.src = c.file; im.alt = "サンプル";
+    im.onclick = () => { if (im.complete) judge(toRGBA(im, im.naturalWidth, im.naturalHeight)); };
+    $("samples").appendChild(im);
+    const li = document.createElement("li"); const a = document.createElement("a");
+    a.href = c.page; a.textContent = c.title.replace(/^File:/, ""); li.appendChild(a);
+    li.append(` — ${c.license}`); $("credits").appendChild(li);
+  }
+});
+</script>
+</body>
+</html>
